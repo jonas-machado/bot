@@ -30,8 +30,8 @@ const event = new EmbedBuilder()
   .setTimestamp();
 
 client.on("messageCreate", async (interaction) => {
-  if (interaction.content == "Adria, paga o salgadinho!!!") {
-    const user = await client.users.fetch("997116970287771699");
+  if (interaction.content == "Abgail, paga o salgadinho!!!") {
+    const user = await client.users.fetch("997122144016281664");
     user.send("To esperando o salgadinho :rage:");
     interaction.reply("Ela foi avisada");
   }
