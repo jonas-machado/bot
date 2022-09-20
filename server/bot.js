@@ -23,135 +23,46 @@ client.on("ready", () => {
 });
 
 client.login(process.env.TOKEN);
-const event = new EmbedBuilder()
-  .setColor(0xff0000)
-  .setTitle("teste")
-  .setDescription("testando embed builder")
-  .setTimestamp();
 
-client.on("messageCreate", async (interaction) => {
-  if (interaction.content == "Abgail, paga o salgadinho!!!") {
-    const user = await client.users.fetch("997122144016281664");
-    user.send("To esperando o salgadinho :rage:");
-    interaction.reply("Ela foi avisada");
-  }
-  if (interaction.content === "top") {
-    orion.query(
-      {
-        query: `
-          SELECT TOP 10 
-          DAY(EventTime) AS DayTime, 
-          MONTH(EventTime) AS MonthTime, 
-          year(EventTime) AS YearTime, 
-          HOUR(EventTime) AS HourTime, 
-          MINUTE(EventTime) AS MinuteTime, 
-          SECOND(EventTime) AS SecondTime, 
-          Message, 
-          EventTime, 
-          EventID,
-          EventType,
-          n.NodeID,
-          ncp.NodeID AS NCPNode,
-          IPAddress,
-          NodeName,
-          Location,
-          NodeDescription,
-          POP_ID,
-          City,
-          Department
-          FROM  
-          Orion.Events AS e, 
-          Orion.Nodes AS n,
-          Orion.NodesCustomProperties AS ncp
-          WHERE 
-          EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid
-          OR 
-          EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid
-          OR 
-          EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid
-          OR 
-          EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid
-          ORDER BY EventTime DESC;
-                      `,
-        //query: `SELECT TOP 15 GETDATE() AS Time, Message, EventTime, EventType FROM Orion.Events WHERE EventType LIKE "1" OR EventType LIKE "5" OR EventType LIKE "10" OR EventType LIKE "11" ORDER BY EventTime DESC`,
-      },
-      function (result) {
-        console.log(result);
-        try {
-          const events = new EmbedBuilder()
-            .setColor(
-              result.results[0].EventType == 1 ||
-                result.results[0].EventType == 10
-                ? 0xff0000
-                : 0x32cd32
-            )
-            .setTitle(result.results[0].NodeName.replace(/_/g, " "))
-            .setDescription(result.results[0].Message)
-            .addFields(
-              {
-                name: "IP",
-                value: result.results[0].IPAddress + "",
-                inline: true,
-              },
-              result.results[0]?.Department
-                ? {
-                    name: "TIPO",
-                    value: result.results[0].Department + "",
-                    inline: true,
-                  }
-                : {
-                    name: "\u200B",
-                    value: "\u200B",
-                    inline: true,
-                  },
-              {
-                name: "\u200B",
-                value: "\u200B",
-                inline: true,
-              },
-              result.results[0].POP_ID || result.results[0].Location
-                ? {
-                    name: "LOCAL",
-                    value: `${
-                      result.results[0].POP_ID
-                        ? result.results[0].POP_ID + "."
-                        : ""
-                    }  ${
-                      result.results[0].Location
-                        ? result.results[0].Location + "."
-                        : ""
-                    }`,
-                    inline: true,
-                  }
-                : {
-                    name: "\u200B",
-                    value: "\u200B",
-                    inline: true,
-                  },
-              result.results[0].City
-                ? {
-                    name: "CIDADE",
-                    value: result.results[0].City,
-                  }
-                : {
-                    name: "\u200B",
-                    value: "\u200B",
-                    inline: true,
-                  }
-            )
-            .setFooter({
-              text: `${("0" + result.results[0].DayTime).slice(-2)}/${(
-                "0" + result.results[0].MonthTime
-              ).slice(-2)}/${result.results[0].YearTime} ${(
-                "0" + result.results[0].HourTime
-              ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`,
-            });
-          interaction.reply({ embeds: [events] });
-        } catch (err) {
-          console.log(err);
-        }
+const cobrança = {
+  0: "994582003733254207",
+  1: "997132879144435812",
+  2: "994591749076951050",
+  3: "994588286712553482",
+  4: "991334148025356429",
+  5: "993857720081985537",
+  6: "992516894311591997",
+  7: "995036773833003039",
+  8: "997116970287771699",
+  9: "997122144016281664",
+  10: "994582003733254207",
+};
+
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
+  const { commandName } = interaction;
+  if (commandName == "salgadinho") {
+    let date = new Date();
+    let month = date.getMonth();
+    console.log(cobrança[month]);
+
+    const user = await client.users.fetch(cobrança[month]);
+    user.send("To esperando o salgadinho 😡").catch((e) => {
+      if (e) {
+        interaction.channel.send(
+          "Bah, não consegui cobrar, vou ter que tomar outras providências 🔪"
+        );
       }
-    );
+    });
+    interaction.reply("Tá cobrado 👍");
+  }
+  if (commandName == "stop") {
+    clearInterval(intervalVerification);
+    interaction.reply("Opa meu querido, a verificação foi parada");
+  }
+  if (commandName == "start") {
+    adicionar();
+    interaction.reply("Opa coisa linda, verificação vai começar agora");
   }
 });
 
@@ -200,7 +111,7 @@ const adicionar = () => {
       result.results.map((event) => {
         IDEvent.push(event.EventID);
       });
-      console.log(IDEvent);
+      
       setInterval(() => {
         orion.query(
           {
@@ -244,8 +155,12 @@ const adicionar = () => {
           },
           function (result) {
             try {
+              let IDEventNew = [];
+              result.results.map((event) => {
+              IDEventNew.push(event.EventID);
+              });
               for (let i = 0; i < result.results.length; i++) {
-                if (!IDEvent.includes(result.results[i].EventID)) {
+                if (!IDEvent.includes(IDEventNew[i])) {
                   const events = new EmbedBuilder()
                     .setColor(
                       result.results[i].EventType == 1 ||
@@ -317,32 +232,21 @@ const adicionar = () => {
                       )}`,
                     });
                   client.channels.cache
-                    .get(`1017773873321754695`)
+                    .get(`994217078892527627`)
                     .send({ embeds: [events] });
-                  // .send(
-                  //   `${result.results[i].Message} \nData: ${(
-                  //     "0" + result.results[i].DayTime
-                  //   ).slice(-2)}/${("0" + result.results[i].MonthTime).slice(
-                  //     -2
-                  //   )}/${result.results[i].YearTime} ${(
-                  //     "0" + result.results[i].HourTime
-                  //   ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
-                  //     -2
-                  //   )}:${("0" + result.results[i].SecondTime).slice(-2)}\n`
-                  // );
-                  IDEvent.unshift(result.results[i].EventID);
-                  IDEvent.pop();
+                  IDEvent = IDEventNew
                   console.log(result.results[i].Message);
                 } else {
                   console.log("repetido");
                 }
               }
+              console.log(IDEventNew)
             } catch (err) {
               console.log(err);
             }
           }
         );
-      }, 10000);
+      }, 20000);
     }
   );
 };
