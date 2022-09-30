@@ -1,9 +1,9 @@
 require("dotenv").config();
 const { SlashCommandBuilder, Routes } = require("discord.js");
 const { REST } = require("@discordjs/rest");
-const clientId = "994223271241334914";
+const clientId = process.env.CLIENTID;
 const token = process.env.TOKEN;
-
+console.log(clientId);
 const commands = [
   new SlashCommandBuilder()
     .setName("stop")
@@ -14,6 +14,9 @@ const commands = [
   new SlashCommandBuilder()
     .setName("start")
     .setDescription("Inicia a verificação!"),
+  new SlashCommandBuilder()
+    .setName("teste")
+    .setDescription("Envia apenas um evento para teste"),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(token);
