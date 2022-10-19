@@ -44,7 +44,89 @@ const cobrança = {
 };
 
 let globalOltIntelbras = [];
-
+const func = {
+  queryNode: `SELECT TOP 100 
+  EventID,
+  DAY(EventTime) AS DayTime, 
+  MONTH(EventTime) AS MonthTime, 
+  year(EventTime) AS YearTime, 
+  HOUR(EventTime) AS HourTime, 
+  MINUTE(EventTime) AS MinuteTime, 
+  SECOND(EventTime) AS SecondTime, 
+  Message, 
+  EventType,         
+  IPAddress,
+  NodeName,
+  Location,
+  POP_ID,
+  City,
+  Department,
+  nwu.WebUri,
+  n.NodeID,
+  ncp.NodeID AS NCPNode,
+  nwu.NodeID AS NWUNode,
+  EventTime,
+  NetObjectID
+  FROM  
+  Orion.Events AS e, 
+  Orion.Nodes AS n,
+  Orion.NodesCustomProperties AS ncp,
+  Orion.NodeWebUri AS nwu
+  WHERE 
+  EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
+  OR 
+  EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
+  OR 
+  EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
+  OR 
+  EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
+  ORDER BY EventTime DESC;`,
+  queryInterface: `
+  SELECT
+  EventID,
+  DAY(EventTime) AS DayTime,
+  MONTH(EventTime) AS MonthTime,
+  year(EventTime) AS YearTime,
+  HOUR(EventTime) AS HourTime,
+ MINUTE(EventTime) AS MinuteTime,
+  SECOND(EventTime) AS SecondTime,
+  Message,
+  EventType,
+  IPAddress,
+  IfName,
+ NodeName,
+ Location,
+  POP_ID,
+  City,
+  Department,
+  nwu.WebUri,
+  n.NodeID,
+  ncp.NodeID AS NCPNode,
+  nwu.NodeID AS NWUNode,
+  EventTime,
+FullName,
+i.NodeID AS iNodeID, 
+       i.InterfaceID AS iIntefaceID, 
+       iwu.NodeID AS iwuNodeID, 
+       iwu.InterfaceID AS iwuIntefaceID, 
+       iwu.WebUri AS IWebUri
+  FROM
+  Orion.Events AS e,
+  Orion.Nodes AS n,
+  Orion.NodesCustomProperties AS ncp,
+  Orion.NodeWebUri AS nwu,
+Orion.NPM.Interfaces as i, 
+Orion.NPM.InterfaceWebUri AS iwu
+  WHERE
+  EventID=@id AND
+networknode=n.nodeid AND 
+networknode=ncp.nodeid AND 
+networknode=nwu.nodeid AND
+i.InterfaceID=iwu.InterfaceID AND
+Message LIKE i.FullName + '%'
+ ORDER BY EventTime DESC;
+  `,
+};
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const { commandName } = interaction;
@@ -74,44 +156,7 @@ client.on("interactionCreate", async (interaction) => {
   if (commandName == "teste") {
     orion.query(
       {
-        query: `
-        SELECT TOP 100 
-      EventID,
-      DAY(EventTime) AS DayTime, 
-      MONTH(EventTime) AS MonthTime, 
-      year(EventTime) AS YearTime, 
-      HOUR(EventTime) AS HourTime, 
-      MINUTE(EventTime) AS MinuteTime, 
-      SECOND(EventTime) AS SecondTime, 
-      Message, 
-      EventType,         
-      IPAddress,
-      NodeName,
-      Location,
-      POP_ID,
-      City,
-      Department,
-      nwu.WebUri,
-      n.NodeID,
-      ncp.NodeID AS NCPNode,
-      nwu.NodeID AS NWUNode,
-      EventTime,
-      NetObjectID
-      FROM  
-      Orion.Events AS e, 
-      Orion.Nodes AS n,
-      Orion.NodesCustomProperties AS ncp,
-      Orion.NodeWebUri AS nwu
-      WHERE 
-      EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
-      OR 
-      EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
-      OR 
-      EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
-      OR 
-      EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid
-      ORDER BY EventTime DESC;
-      `,
+        query: func.queryNode,
       },
       async function (result) {
         const address = hyperlink(
@@ -187,7 +232,7 @@ client.on("interactionCreate", async (interaction) => {
               "0" + result.results[0].HourTime
             ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`,
           });
-        const i = 1;
+        const i = 12;
         if (
           (result.results[i].EventType == 10 &&
             result.results[i].NodeID != result.results[i].NetObjectID) ||
@@ -196,59 +241,16 @@ client.on("interactionCreate", async (interaction) => {
         ) {
           orion.query(
             {
-              query: `
-              SELECT
-              EventID,
-              DAY(EventTime) AS DayTime,
-              MONTH(EventTime) AS MonthTime,
-              year(EventTime) AS YearTime,
-              HOUR(EventTime) AS HourTime,
-             MINUTE(EventTime) AS MinuteTime,
-              SECOND(EventTime) AS SecondTime,
-              Message,
-              EventType,
-              IPAddress,
-              Name,
-             NodeName,
-             Location,
-              POP_ID,
-              City,
-              Department,
-              nwu.WebUri,
-              n.NodeID,
-              ncp.NodeID AS NCPNode,
-              nwu.NodeID AS NWUNode,
-              EventTime,
-   FullName,
-   i.NodeID AS iNodeID, 
-                   i.InterfaceID AS iIntefaceID, 
-                   iwu.NodeID AS iwuNodeID, 
-                   iwu.InterfaceID AS iwuIntefaceID, 
-                   iwu.WebUri AS IWebUri
-              FROM
-              Orion.Events AS e,
-              Orion.Nodes AS n,
-              Orion.NodesCustomProperties AS ncp,
-              Orion.NodeWebUri AS nwu,
-   Orion.NPM.Interfaces as i, 
-   Orion.NPM.InterfaceWebUri AS iwu
-              WHERE
-              EventID=@id AND
-   networknode=n.nodeid AND 
-   networknode=ncp.nodeid AND 
-   networknode=nwu.nodeid AND
-   i.InterfaceID=iwu.InterfaceID AND
-   Message LIKE i.FullName + '%'
-             ORDER BY EventTime DESC;
-              `,
+              query: func.queryInterface,
               parameters: {
                 id: result.results[i].EventID,
               },
             },
             async function (result) {
               let i = 0;
-              const pon = result.results[0].Name.split("-");
-              if (pon[3] == 0) {
+              const pon = result.results[0].IfName.split("-");
+              console.log(pon);
+              if (pon[3] == 0 || pon[0].includes("gpon")) {
                 const address = hyperlink(
                   result.results[0].IPAddress,
                   `http://172.16.40.9${result.results[0].IWebUri}`
@@ -338,38 +340,39 @@ client.on("interactionCreate", async (interaction) => {
                   )}`,
                 });
                 let onus = [];
-                if (globalOltIntelbras.length > 3) {
-                  const EmbedConf = {
-                    address: hyperlink(
-                      result.results[0].IPAddress,
-                      `http://172.16.40.9${result.results[0].WebUri}`
-                    ),
-                  };
-                  globalOltIntelbras.map((onu) => {
-                    onus.push(onu.Message);
+                const EmbedConf = {
+                  address: hyperlink(
+                    result.results[0].IPAddress,
+                    `http://172.16.40.9${result.results[0].WebUri}`
+                  ),
+                };
+                globalOltIntelbras.map((onu) => {
+                  onus.push(onu.Message);
+                });
+                const events = new EmbedBuilder()
+                  .setColor(0xff0000)
+                  .setTitle(result.results[i].NodeName.replace(/_/g, " "))
+                  .setDescription(onus.join("\n"))
+                  .setFooter({
+                    text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
+                      "0" + result.results[i].MonthTime
+                    ).slice(-2)}/${result.results[i].YearTime} ${(
+                      "0" + result.results[i].HourTime
+                    ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
+                      -2
+                    )}`,
                   });
-                  const events = new EmbedBuilder()
-                    .setColor(0xff0000)
-                    .setTitle(result.results[i].NodeName.replace(/_/g, " "))
-                    .setDescription(onus.join("\n"))
-                    .setFooter({
-                      text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
-                        "0" + result.results[i].MonthTime
-                      ).slice(-2)}/${result.results[i].YearTime} ${(
-                        "0" + result.results[i].HourTime
-                      ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
-                        -2
-                      )}`,
-                    });
-                  const time = setTimeout(() => {
-                    client.channels.cache
-                      .get(`1021807249573806090`)
-                      .send({ embeds: [events] });
-                  }, 20000);
+
+                if ((globalOltIntelbras.length = 3)) {
+                  this.time;
+                }
+                if (globalOltIntelbras.length > 3) {
+                  time.refresh();
                 }
               } else {
                 console.log("não deu");
               }
+              console.log(pon[3]);
             }
           );
         } else {
