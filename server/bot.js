@@ -44,6 +44,30 @@ const cobrança = {
 };
 
 let globalOltIntelbras = [];
+
+const time = setTimeout(() => {
+  if ((globalOltIntelbras.length = 3)) {
+  } else {
+    console.log("é menor");
+  }
+}, 5000);
+
+const verify = async () => {
+  let alarm = [];
+  if (globalOltIntelbras.length >= 3) {
+    for (let message of globalOltIntelbras) {
+      alarm.push(message.Message);
+      time.refresh();
+      return alarm;
+    }
+    console.log(alarm.join("\n"));
+    return alarm;
+  }
+  if (globalOltIntelbras.length < 3) {
+    clearTimeout(time);
+  }
+};
+
 const func = {
   queryNode: `SELECT TOP 100 
   EventID,
@@ -232,7 +256,7 @@ client.on("interactionCreate", async (interaction) => {
               "0" + result.results[0].HourTime
             ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`,
           });
-        const i = 12;
+        const i = 5;
         if (
           (result.results[i].EventType == 10 &&
             result.results[i].NodeID != result.results[i].NetObjectID) ||
@@ -362,13 +386,12 @@ client.on("interactionCreate", async (interaction) => {
                       -2
                     )}`,
                   });
-
-                if ((globalOltIntelbras.length = 3)) {
-                  this.time;
-                }
-                if (globalOltIntelbras.length > 3) {
-                  time.refresh();
-                }
+                verify();
+                // const time = setTimeout(() => {
+                //   client.channels.cache
+                //     .get(`1021807249573806090`)
+                //     .send({ embeds: [events] });
+                // }, 20000);
               } else {
                 console.log("não deu");
               }
