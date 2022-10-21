@@ -1,10 +1,12 @@
 require("dotenv").config();
+
 const {
   Client,
   GatewayIntentBits,
   EmbedBuilder,
   hyperlink,
 } = require("discord.js");
+const { rejects } = require("node:assert");
 
 const orion = require("solar-orionjs")({
   server: "172.16.40.9",
@@ -43,31 +45,37 @@ const cobrança = {
   10: "994582003733254207",
 };
 
+const i = 0;
+
 let globalOltIntelbras = [];
+var timeout_handles = [];
 
-const time = setTimeout(() => {
-  if ((globalOltIntelbras.length = 3)) {
-  } else {
-    console.log("é menor");
-  }
-}, 5000);
-
-const verify = async () => {
+function set_time_out(color, title, id) {
   let alarm = [];
-  if (globalOltIntelbras.length >= 3) {
+
+  const embedIntefaces = {
+    color: color,
+    title: title,
+  };
+
+  if (globalOltIntelbras.length > 3) {
     for (let message of globalOltIntelbras) {
       alarm.push(message.Message);
-      time.refresh();
-      return alarm;
     }
-    console.log(alarm.join("\n"));
-    return alarm;
-  }
-  if (globalOltIntelbras.length < 3) {
-    clearTimeout(time);
-  }
-};
+    const alarmes = alarm.join("\n");
+    /// wrapper
+    if (id in timeout_handles) {
+      clearTimeout(timeout_handles[id]);
+    }
 
+    timeout_handles[id] = setTimeout(() => {
+      console.log(alarmes);
+      globalOltIntelbras.length = 0;
+    }, 10000);
+  } else {
+    console.log("menor");
+  }
+}
 const func = {
   queryNode: `SELECT TOP 100 
   EventID,
@@ -184,29 +192,29 @@ client.on("interactionCreate", async (interaction) => {
       },
       async function (result) {
         const address = hyperlink(
-          result.results[0].IPAddress,
-          `http://172.16.40.9${result.results[0].WebUri}`
+          result.results[i].IPAddress,
+          `http://172.16.40.9${result.results[i].WebUri}`
         );
 
         const events = new EmbedBuilder()
           .setColor(
-            result.results[0].EventType == 1 ||
-              result.results[0].EventType == 10
+            result.results[i].EventType == 1 ||
+              result.results[i].EventType == 10
               ? 0xff0000
               : 0x32cd32
           )
-          .setTitle(result.results[0].NodeName.replace(/_/g, " "))
-          .setDescription(result.results[0].Message)
+          .setTitle(result.results[i].NodeName.replace(/_/g, " "))
+          .setDescription(result.results[i].Message)
           .addFields(
             {
               name: "IP",
               value: address,
               inline: true,
             },
-            result.results[0]?.Department
+            result.results[i]?.Department
               ? {
                   name: "TIPO",
-                  value: result.results[0].Department,
+                  value: result.results[i].Department,
                   inline: true,
                 }
               : {
@@ -219,16 +227,16 @@ client.on("interactionCreate", async (interaction) => {
               value: "\u200B",
               inline: true,
             },
-            result.results[0].POP_ID || result.results[0].Location
+            result.results[i].POP_ID || result.results[i].Location
               ? {
                   name: "LOCAL",
                   value: `${
-                    result.results[0].POP_ID
-                      ? result.results[0].POP_ID + "."
+                    result.results[i].POP_ID
+                      ? result.results[i].POP_ID + "."
                       : ""
                   }  ${
-                    result.results[0].Location
-                      ? result.results[0].Location + "."
+                    result.results[i].Location
+                      ? result.results[i].Location + "."
                       : ""
                   }`,
                   inline: true,
@@ -238,10 +246,10 @@ client.on("interactionCreate", async (interaction) => {
                   value: "\u200B",
                   inline: true,
                 },
-            result.results[0].City
+            result.results[i].City
               ? {
                   name: "CIDADE",
-                  value: result.results[0].City,
+                  value: result.results[i].City,
                 }
               : {
                   name: "\u200B",
@@ -250,19 +258,21 @@ client.on("interactionCreate", async (interaction) => {
                 }
           )
           .setFooter({
-            text: `${("0" + result.results[0].DayTime).slice(-2)}/${(
-              "0" + result.results[0].MonthTime
-            ).slice(-2)}/${result.results[0].YearTime} ${(
-              "0" + result.results[0].HourTime
-            ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`,
+            text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
+              "0" + result.results[i].MonthTime
+            ).slice(-2)}/${result.results[i].YearTime} ${(
+              "0" + result.results[i].HourTime
+            ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(-2)}`,
           });
-        const i = 5;
         if (
           (result.results[i].EventType == 10 &&
             result.results[i].NodeID != result.results[i].NetObjectID) ||
           (result.results[i].EventType == 11 &&
             result.results[i].NodeID != result.results[i].NetObjectID)
         ) {
+          console.log(
+            ` node: ${result.results[i].NodeID}  net: ${result.results[i].NetObjectID}`
+          );
           orion.query(
             {
               query: func.queryInterface,
@@ -386,7 +396,7 @@ client.on("interactionCreate", async (interaction) => {
                       -2
                     )}`,
                   });
-                verify();
+                set_time_out();
                 // const time = setTimeout(() => {
                 //   client.channels.cache
                 //     .get(`1021807249573806090`)
@@ -596,4 +606,4 @@ client.on("interactionCreate", async (interaction) => {
 //     }
 //   );
 // };
-// adicionar();
+// adicionar()
