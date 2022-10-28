@@ -46,7 +46,7 @@ const cobrança = {
 
 //const i = 2;
 
-let globalOltIntelbras = [];
+let globalOltIntelbras = {};
 var timeout_handles = [];
 var timeout_handles_else = [];
 
@@ -545,10 +545,7 @@ const adicionar = () => {
                         console.log(pon);
                         if (pon[3] > 0) {
                           globalOltIntelbras.push({
-                            Type: result.results[0].EventType,
-                            ID: result.results[0].EventID,
                             Message: result.results[0].Message,
-                            onu: result.results[0].Name,
                           });
 
                           const title = result.results[0].NodeName.replace(
