@@ -21,6 +21,7 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
   ],
 }); //create new client
 
@@ -44,7 +45,7 @@ const cobrança = {
   10: "994582003733254207",
 };
 
-const i = 0;
+const i = 8;
 
 let globalOltIntelbras = {};
 let globalOltIntelbrasDown = {};
@@ -52,8 +53,9 @@ var timeout_handles = [];
 var timeout_handles_else = [];
 var timeout_handles_down = [];
 var timeout_handles_else_down = [];
+const timeForWait = 300000;
 
-function set_time_out(color, title, state, time, id) {
+function set_time_out(color, title, time, id) {
   //this is for up onus
   for (let olts in globalOltIntelbras) {
     if (globalOltIntelbras[olts].length > 3) {
@@ -74,14 +76,14 @@ function set_time_out(color, title, state, time, id) {
           .get(`1021807249573806090`)
           .send({ embeds: [embedIntefaces] });
         globalOltIntelbras[olts].length = 0;
-      }, 20000);
+      }, timeForWait);
     } else {
       if (olts in timeout_handles_else) {
         clearTimeout(timeout_handles_else[olts]);
       }
       timeout_handles_else[olts] = setTimeout(() => {
         globalOltIntelbras[olts].length = 0;
-      }, 20000);
+      }, timeForWait);
       console.log("menor");
     }
   }
@@ -105,18 +107,25 @@ function set_time_out(color, title, state, time, id) {
           .get(`1021807249573806090`)
           .send({ embeds: [embedIntefaces] });
         globalOltIntelbrasDown[olts].length = 0;
-      }, 20000);
+      }, timeForWait);
     } else {
       if (olts in timeout_handles_else_down) {
         clearTimeout(timeout_handles_else_down[olts]);
       }
       timeout_handles_else_down[olts] = setTimeout(() => {
         globalOltIntelbrasDown[olts].length = 0;
-      }, 20000);
+      }, timeForWait);
       console.log("menor");
     }
   }
 }
+
+const sendToN1 = (embedObject) => {
+  const message = client.channels.cache
+    .get(`1037699806400876604`)
+    .send({ embeds: [embedObject] });
+};
+
 const func = {
   queryNode: `SELECT TOP 100 
   EventID,
@@ -400,7 +409,7 @@ client.on("interactionCreate", async (interaction) => {
                       -2
                     )}`,
                   });
-                client.channels.cache
+                const message = client.channels.cache
                   .get(`1021807249573806090`)
                   .send({ embeds: [events] });
               } else if (pon[3] > 0) {
@@ -461,7 +470,27 @@ client.on("interactionCreate", async (interaction) => {
             }
           );
         } else {
-          return interaction.reply({ embeds: [events] });
+          const message = await interaction.reply({
+            embeds: [events],
+            fetchReply: true,
+          });
+          message.react("🚨");
+          const filter = (reaction, user) => {
+            return reaction.emoji.name === "🚨" && !user.bot;
+          };
+          const collector = message.createReactionCollector({
+            filter,
+            max: 1,
+          });
+
+          collector.on("collect", (reaction, user) => {
+            console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
+            sendToN1(events);
+          });
+          collector.on("end", (collected, reason) => {
+            // reactions are no longer collected
+            // if the 👍 emoji is clicked the MAX_REACTIONS time
+          });
         }
       }
     );
@@ -476,7 +505,7 @@ client.on("interactionCreate", async (interaction) => {
 //     function (result) {
 //       let IDEvent = [];
 //       result.results.map((event) => {
-//         IDEvent.push(event.EventID);
+//         IDEvent.unshift(event.EventID);
 //       });
 
 //       setInterval(() => {
@@ -488,14 +517,14 @@ client.on("interactionCreate", async (interaction) => {
 //             try {
 //               let IDEventNew = [];
 //               result.results.map((event) => {
-//                 IDEventNew.push(event.EventID);
+//                 IDEventNew.unshift(event.EventID);
 //               });
 //               for (let i = 0; i < result.results.length; i++) {
 //                 const msg = hyperlink(
 //                   result.results[i].IPAddress,
 //                   `http://172.16.40.9${result.results[i].WebUri}`
 //                 );
-//                 if (!IDEvent.includes(IDEventNew[i])) {
+//                 if (!IDEventNew.includes(IDEvent[i])) {
 //                   const events = new EmbedBuilder()
 //                     .setColor(
 //                       result.results[i].EventType == 1 ||
@@ -573,9 +602,6 @@ client.on("interactionCreate", async (interaction) => {
 //                     (result.results[i].EventType == 11 &&
 //                       result.results[i].NodeID != result.results[i].NetObjectID)
 //                   ) {
-//                     console.log(
-//                       ` node: ${result.results[i].NodeID}  net: ${result.results[i].NetObjectID}`
-//                     );
 //                     orion.query(
 //                       {
 //                         query: func.queryInterface,
@@ -588,9 +614,29 @@ client.on("interactionCreate", async (interaction) => {
 //                         console.log(pon);
 //                         if (pon[3] > 0) {
 //                           let eachOLT = result.results[0].NodeName;
-//                           globalOltIntelbras[eachOLT].push(
-//                             result.results[0].Message
-//                           );
+//                           if (
+//                             globalOltIntelbras[eachOLT] &&
+//                             result.results[0].EventType == 11
+//                           ) {
+//                             globalOltIntelbras[eachOLT].push(
+//                               result.results[0].Message
+//                             );
+//                           } else if (
+//                             globalOltIntelbrasDown[eachOLT] &&
+//                             result.results[0].EventType != 11
+//                           ) {
+//                             globalOltIntelbrasDown[eachOLT].push(
+//                               result.results[0].Message
+//                             );
+//                           } else {
+//                             result.results[i].EventType == 11
+//                               ? (globalOltIntelbras[eachOLT] = [
+//                                   result.results[0].Message,
+//                                 ])
+//                               : (globalOltIntelbrasDown[eachOLT] = [
+//                                   result.results[0].Message,
+//                                 ]);
+//                           }
 
 //                           const title = result.results[0].NodeName.replace(
 //                             /_/g,
@@ -609,9 +655,9 @@ client.on("interactionCreate", async (interaction) => {
 //                           ).slice(-2)}`;
 
 //                           if (state) {
-//                             set_time_out(0x32cd32, title, "UP", time);
+//                             set_time_out(0x32cd32, title, time);
 //                           } else {
-//                             set_time_out(0xff0000, title, "DOWN", time);
+//                             set_time_out(0xff0000, title, time);
 //                           }
 //                         } else {
 //                           const address = hyperlink(
@@ -709,7 +755,9 @@ client.on("interactionCreate", async (interaction) => {
 //                   console.log("repetido");
 //                 }
 //               }
+//               console.log(IDEvent);
 //               IDEvent = IDEventNew;
+
 //               console.log(IDEventNew);
 //             } catch (err) {
 //               console.log(err);
