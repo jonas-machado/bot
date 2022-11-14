@@ -45,36 +45,51 @@ const cobrança = {
   10: "994582003733254207",
 };
 
-const i = 8;
-
-let globalOltIntelbras = {};
-let globalOltIntelbrasDown = {};
+let globalOltIntelbras = [];
+let globalOltIntelbrasDown = [];
 var timeout_handles = [];
 var timeout_handles_else = [];
 var timeout_handles_down = [];
 var timeout_handles_else_down = [];
-const timeForWait = 300000;
+const timeForWait = 180000;
+const timeOfInterval = 30000;
 
-function set_time_out(color, title, time, id) {
+const set_time_out = async (color, title, time, id) => {
+  console.log(globalOltIntelbras);
+  console.log(globalOltIntelbrasDown);
+
   //this is for up onus
   for (let olts in globalOltIntelbras) {
-    if (globalOltIntelbras[olts].length > 3) {
-      const alarmes = globalOltIntelbras[olts].join("\n");
+    if (globalOltIntelbras[olts]["Message"].length > 3) {
+      const alarmes = globalOltIntelbras[olts]["Message"].join("\n");
       /// wrapper
       if (olts in timeout_handles) {
         clearTimeout(timeout_handles[olts]);
       }
-      timeout_handles[olts] = setTimeout(() => {
+      timeout_handles[olts] = setTimeout(async () => {
         const embedIntefaces = {
-          color: color,
-          title: `${title}`,
+          color: 0x32cd32,
+          title: olts.replace(/_/g, " "),
           description: alarmes,
-          footer: { text: time },
+          footer: { text: globalOltIntelbras[olts]["Time"] },
         };
         console.log(alarmes);
-        client.channels.cache
-          .get(`1021807249573806090`)
+        let message = await client.channels.cache
+          .get(channel)
           .send({ embeds: [embedIntefaces] });
+        message.react("🚨");
+        const filter = (reaction, user) => {
+          return reaction.emoji.name === "🚨" && !user.bot;
+        };
+        const collector = message.createReactionCollector({
+          filter,
+          max: 1,
+        });
+
+        collector.on("collect", (reaction, user) => {
+          console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
+          sendToN1(embedIntefaces);
+        });
         globalOltIntelbras[olts].length = 0;
       }, timeForWait);
     } else {
@@ -89,24 +104,37 @@ function set_time_out(color, title, time, id) {
   }
   //this is for down onus
   for (let olts in globalOltIntelbrasDown) {
-    if (globalOltIntelbrasDown[olts].length > 3) {
-      const alarmes = globalOltIntelbrasDown[olts].join("\n");
+    if (globalOltIntelbrasDown[olts]["Message"].length > 3) {
+      const alarmes = globalOltIntelbrasDown[olts]["Message"].join("\n");
       /// wrapper
       if (olts in timeout_handles_down) {
         clearTimeout(timeout_handles_down[olts]);
       }
-      timeout_handles_down[olts] = setTimeout(() => {
+      timeout_handles_down[olts] = setTimeout(async () => {
         const embedIntefaces = {
-          color: color,
-          title: `${title}`,
+          color: 0xff0000,
+          title: olts.replace(/_/g, " "),
           description: alarmes,
-          footer: { text: time },
+          footer: { text: globalOltIntelbrasDown[olts]["Time"] },
         };
         console.log(alarmes);
-        client.channels.cache
-          .get(`1021807249573806090`)
+        let message = await client.channels.cache
+          .get(channel)
           .send({ embeds: [embedIntefaces] });
         globalOltIntelbrasDown[olts].length = 0;
+        message.react("🚨");
+        const filter = (reaction, user) => {
+          return reaction.emoji.name === "🚨" && !user.bot;
+        };
+        const collector = message.createReactionCollector({
+          filter,
+          max: 1,
+        });
+
+        collector.on("collect", (reaction, user) => {
+          console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
+          sendToN1(embedIntefaces);
+        });
       }, timeForWait);
     } else {
       if (olts in timeout_handles_else_down) {
@@ -118,11 +146,33 @@ function set_time_out(color, title, time, id) {
       console.log("menor");
     }
   }
-}
+};
+
+const sendToMonitoramento = async (events) => {
+  let message = await client.channels.cache
+    .get(channel)
+    .send({ embeds: [events] });
+  message.react("🚨");
+  const filter = (reaction, user) => {
+    return reaction.emoji.name === "🚨" && !user.bot;
+  };
+  const collector = message.createReactionCollector({
+    filter,
+    max: 1,
+  });
+  collector.on("collect", (reaction, user) => {
+    console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
+    sendToN1(events);
+  });
+  collector.on("end", (collected, reason) => {
+    // reactions are no longer collected
+    // if the 👍 emoji is clicked the MAX_REACTIONS time
+  });
+};
 
 const sendToN1 = (embedObject) => {
-  const message = client.channels.cache
-    .get(`1037699806400876604`)
+  let message = client.channels.cache
+    .get(channelN1)
     .send({ embeds: [embedObject] });
 };
 
@@ -238,534 +288,539 @@ client.on("interactionCreate", async (interaction) => {
   if (commandName == "teste") {
     orion.query(
       {
-        query: func.queryNode,
+        query: `SELECT TOP 100 
+        EventID,
+        DAY(EventTime) AS DayTime, 
+        MONTH(EventTime) AS MonthTime, 
+        year(EventTime) AS YearTime, 
+        HOUR(EventTime) AS HourTime, 
+        MINUTE(EventTime) AS MinuteTime, 
+        SECOND(EventTime) AS SecondTime, 
+        Message, 
+        EventType,         
+        IPAddress,
+        NodeName,
+        Location,
+        POP_ID,
+        City,
+        Department,
+        nwu.WebUri,
+        n.NodeID,
+        ncp.NodeID AS NCPNode,
+        nwu.NodeID AS NWUNode,
+        EventTime,
+        NetObjectID
+        FROM  
+        Orion.Events AS e, 
+        Orion.Nodes AS n,
+        Orion.NodesCustomProperties AS ncp,
+        Orion.NodeWebUri AS nwu
+        WHERE 
+        EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='541'
+        OR 
+        EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='541'
+        OR 
+        EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='541'
+        OR 
+        EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='541'
+      OR
+      EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1195'
+        OR 
+        EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1195'
+        OR 
+        EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1195'
+        OR 
+        EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1195'
+      OR
+      EventType LIKE "1" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1713'
+        OR 
+        EventType LIKE "5" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1713'
+        OR 
+        EventType LIKE "10" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1713'
+        OR 
+        EventType LIKE "11" AND networknode=n.nodeid AND networknode=ncp.nodeid AND networknode=nwu.nodeid AND networknode='1713'
+        ORDER BY EventTime DESC`,
       },
       async function (result) {
-        const address = hyperlink(
-          result.results[i].IPAddress,
-          `http://172.16.40.9${result.results[i].WebUri}`
-        );
-
-        const events = new EmbedBuilder()
-          .setColor(
-            result.results[i].EventType == 1 ||
-              result.results[i].EventType == 10
-              ? 0xff0000
-              : 0x32cd32
-          )
-          .setTitle(result.results[i].NodeName.replace(/_/g, " "))
-          .setDescription(result.results[i].Message)
-          .addFields(
-            {
-              name: "IP",
-              value: address,
-              inline: true,
-            },
-            result.results[i]?.Department
-              ? {
-                  name: "TIPO",
-                  value: result.results[i].Department,
-                  inline: true,
-                }
-              : {
-                  name: "\u200B",
-                  value: "\u200B",
+        try {
+          for (let i = 0; i < result.results.length; i++) {
+            const msg = hyperlink(
+              result.results[i].IPAddress,
+              `http://172.16.40.9${result.results[i].WebUri}`
+            );
+            const events = new EmbedBuilder()
+              .setColor(
+                result.results[i].EventType == 1 ||
+                  result.results[i].EventType == 10
+                  ? 0xff0000
+                  : 0x32cd32
+              )
+              .setTitle(result.results[i].NodeName.replace(/_/g, " "))
+              .setDescription(result.results[i].Message)
+              .addFields(
+                {
+                  name: "IP",
+                  value: msg,
                   inline: true,
                 },
-            {
-              name: "\u200B",
-              value: "\u200B",
-              inline: true,
-            },
-            result.results[i].POP_ID || result.results[i].Location
-              ? {
-                  name: "LOCAL",
-                  value: `${
-                    result.results[i].POP_ID
-                      ? result.results[i].POP_ID + "."
-                      : ""
-                  }  ${
-                    result.results[i].Location
-                      ? result.results[i].Location + "."
-                      : ""
-                  }`,
-                  inline: true,
-                }
-              : {
-                  name: "\u200B",
-                  value: "\u200B",
-                  inline: true,
-                },
-            result.results[i].City
-              ? {
-                  name: "CIDADE",
-                  value: result.results[i].City,
-                }
-              : {
-                  name: "\u200B",
-                  value: "\u200B",
-                  inline: true,
-                }
-          )
-          .setFooter({
-            text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
-              "0" + result.results[i].MonthTime
-            ).slice(-2)}/${result.results[i].YearTime} ${(
-              "0" + result.results[i].HourTime
-            ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(-2)}`,
-          });
-        if (
-          (result.results[i].EventType == 10 &&
-            result.results[i].NodeID != result.results[i].NetObjectID) ||
-          (result.results[i].EventType == 11 &&
-            result.results[i].NodeID != result.results[i].NetObjectID)
-        ) {
-          console.log(
-            ` node: ${result.results[i].NodeID}  net: ${result.results[i].NetObjectID}`
-          );
-          orion.query(
-            {
-              query: func.queryInterface,
-              parameters: {
-                id: result.results[i].EventID,
-              },
-            },
-            async function (result) {
-              const pon = result.results[0].IfName.split("-");
-              console.log(pon);
-              if (pon[3] == 0 || pon[0].includes("gpon")) {
-                let i = 0;
-                const address = hyperlink(
-                  result.results[0].IPAddress,
-                  `http://172.16.40.9${result.results[0].IWebUri}`
-                );
-                const events = new EmbedBuilder()
-                  .setColor(
-                    result.results[i].EventType == 1 ||
-                      result.results[i].EventType == 10
-                      ? 0xff0000
-                      : 0x32cd32
-                  )
-                  .setTitle(result.results[i].NodeName.replace(/_/g, " "))
-                  .setDescription(result.results[i].Message)
-                  .addFields(
-                    {
-                      name: "IP",
-                      value: address,
+                result.results[i]?.Department
+                  ? {
+                      name: "TIPO",
+                      value: result.results[i].Department,
                       inline: true,
-                    },
-                    result.results[i]?.Department
-                      ? {
-                          name: "TIPO",
-                          value: result.results[i].Department,
-                          inline: true,
-                        }
-                      : {
-                          name: "\u200B",
-                          value: "\u200B",
-                          inline: true,
-                        },
-                    {
+                    }
+                  : {
                       name: "\u200B",
                       value: "\u200B",
                       inline: true,
                     },
-                    result.results[i].POP_ID || result.results[i].Location
-                      ? {
-                          name: "LOCAL",
-                          value: `${
-                            result.results[i].POP_ID
-                              ? result.results[i].POP_ID + "."
-                              : ""
-                          }  ${
-                            result.results[i].Location
-                              ? result.results[i].Location + "."
-                              : ""
-                          }`,
+                {
+                  name: "\u200B",
+                  value: "\u200B",
+                  inline: true,
+                },
+                result.results[i].POP_ID || result.results[i].Location
+                  ? {
+                      name: "LOCAL",
+                      value: `${
+                        result.results[i].POP_ID
+                          ? result.results[i].POP_ID + "."
+                          : ""
+                      }  ${
+                        result.results[i].Location
+                          ? result.results[i].Location + "."
+                          : ""
+                      }`,
+                      inline: true,
+                    }
+                  : {
+                      name: "\u200B",
+                      value: "\u200B",
+                      inline: true,
+                    },
+                result.results[i].City
+                  ? {
+                      name: "CIDADE",
+                      value: result.results[i].City,
+                    }
+                  : {
+                      name: "\u200B",
+                      value: "\u200B",
+                      inline: true,
+                    }
+              )
+              .setFooter({
+                text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
+                  "0" + result.results[i].MonthTime
+                ).slice(-2)}/${result.results[i].YearTime} ${(
+                  "0" + result.results[i].HourTime
+                ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(-2)}`,
+              });
+            if (
+              (result.results[i].EventType == 10 &&
+                result.results[i].NodeID != result.results[i].NetObjectID) ||
+              (result.results[i].EventType == 11 &&
+                result.results[i].NodeID != result.results[i].NetObjectID)
+            ) {
+              orion.query(
+                {
+                  query: func.queryInterface,
+                  parameters: {
+                    id: result.results[i].EventID,
+                  },
+                },
+                async function (result) {
+                  const pon = result.results[0].IfName.split("-");
+                  console.log(pon);
+                  const state =
+                    result.results[0].EventType == 11 ? true : false;
+                  const time = `${("0" + result.results[0].DayTime).slice(
+                    -2
+                  )}/${("0" + result.results[0].MonthTime).slice(-2)}/${
+                    result.results[0].YearTime
+                  } ${("0" + result.results[0].HourTime).slice(-2)}:${(
+                    "0" + result.results[0].MinuteTime
+                  ).slice(-2)}`;
+                  if (pon[3] > 0) {
+                    let eachOLT = result.results[0].NodeName;
+                    if (
+                      globalOltIntelbras[eachOLT] &&
+                      result.results[0].EventType == 11
+                    ) {
+                      globalOltIntelbras[eachOLT]["Message"].push(
+                        result.results[0].Message
+                      );
+                    } else if (
+                      globalOltIntelbrasDown[eachOLT] &&
+                      result.results[0].EventType != 11
+                    ) {
+                      globalOltIntelbrasDown[eachOLT]["Message"].push(
+                        result.results[0].Message
+                      );
+                    } else {
+                      result.results[0].EventType == 11
+                        ? (globalOltIntelbras[eachOLT] = {
+                            Message: [result.results[0].Message],
+                            Time: time,
+                          })
+                        : (globalOltIntelbrasDown[eachOLT] = {
+                            Message: [result.results[0].Message],
+                            Time: time,
+                          });
+                    }
+                    set_time_out();
+                  } else {
+                    const address = hyperlink(
+                      result.results[0].IPAddress,
+                      `http://172.16.40.9${result.results[0].IWebUri}`
+                    );
+                    const events = new EmbedBuilder()
+                      .setColor(
+                        result.results[0].EventType == 10 ? 0xff0000 : 0x32cd32
+                      )
+                      .setTitle(result.results[0].NodeName.replace(/_/g, " "))
+                      .setDescription(result.results[0].Message)
+                      .addFields(
+                        {
+                          name: "IP",
+                          value: address,
                           inline: true,
-                        }
-                      : {
+                        },
+                        result.results[0]?.Department
+                          ? {
+                              name: "TIPO",
+                              value: result.results[0].Department,
+                              inline: true,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            },
+                        {
                           name: "\u200B",
                           value: "\u200B",
                           inline: true,
                         },
-                    result.results[i].City
-                      ? {
-                          name: "CIDADE",
-                          value: result.results[i].City,
-                        }
-                      : {
-                          name: "\u200B",
-                          value: "\u200B",
-                          inline: true,
-                        }
-                  )
-                  .setFooter({
-                    text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
-                      "0" + result.results[i].MonthTime
-                    ).slice(-2)}/${result.results[i].YearTime} ${(
-                      "0" + result.results[i].HourTime
-                    ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
-                      -2
-                    )}`,
-                  });
-                const message = client.channels.cache
-                  .get(`1021807249573806090`)
-                  .send({ embeds: [events] });
-              } else if (pon[3] > 0) {
-                let i = 0;
-                let eachOLT = result.results[0].NodeName;
-                if (
-                  globalOltIntelbras[eachOLT] ||
-                  globalOltIntelbrasDown[eachOLT]
-                ) {
-                  result.results[i].EventType == 11
-                    ? globalOltIntelbras[eachOLT].push(
-                        result.results[0].Message
+                        result.results[0].POP_ID || result.results[0].Location
+                          ? {
+                              name: "LOCAL",
+                              value: `${
+                                result.results[0].POP_ID
+                                  ? result.results[0].POP_ID + "."
+                                  : ""
+                              }  ${
+                                result.results[0].Location
+                                  ? result.results[0].Location + "."
+                                  : ""
+                              }`,
+                              inline: true,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            },
+                        result.results[0].City
+                          ? {
+                              name: "CIDADE",
+                              value: result.results[0].City,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            }
                       )
-                    : globalOltIntelbrasDown[eachOLT].push(
-                        result.results[0].Message
-                      );
-                } else {
-                  result.results[i].EventType == 11
-                    ? (globalOltIntelbras[eachOLT] = [
-                        result.results[0].Message,
-                      ])
-                    : (globalOltIntelbrasDown[eachOLT] = [
-                        result.results[0].Message,
-                      ]);
+                      .setFooter({
+                        text: `${("0" + result.results[0].DayTime).slice(
+                          -2
+                        )}/${("0" + result.results[0].MonthTime).slice(-2)}/${
+                          result.results[0].YearTime
+                        } ${("0" + result.results[0].HourTime).slice(-2)}:${(
+                          "0" + result.results[0].MinuteTime
+                        ).slice(-2)}`,
+                      });
+                    sendToMonitoramento(events);
+                  }
+                  console.log(pon[3]);
                 }
-                console.log(globalOltIntelbras);
-                console.log(globalOltIntelbrasDown);
-                const forSetTimeout = {
-                  title: result.results[i].NodeName.replace(/_/g, " "),
-                  state: result.results[i].EventType == 11 ? true : false,
-                  time: `${("0" + result.results[i].DayTime).slice(-2)}/${(
-                    "0" + result.results[i].MonthTime
-                  ).slice(-2)}/${result.results[i].YearTime} ${(
-                    "0" + result.results[i].HourTime
-                  ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
-                    -2
-                  )}`,
-                };
-                if (forSetTimeout.state) {
-                  set_time_out(
-                    0x32cd32,
-                    forSetTimeout.title,
-                    "UP",
-                    forSetTimeout.time
-                  );
-                } else {
-                  set_time_out(
-                    0xff0000,
-                    forSetTimeout.title,
-                    "DOWN",
-                    forSetTimeout.time
-                  );
-                }
-              } else {
-                console.log("não deu");
-              }
-              console.log(pon[3]);
+              );
+            } else {
+              sendToMonitoramento(events);
+              console.log(result.results[i].Message);
             }
-          );
-        } else {
-          const message = await interaction.reply({
-            embeds: [events],
-            fetchReply: true,
-          });
-          message.react("🚨");
-          const filter = (reaction, user) => {
-            return reaction.emoji.name === "🚨" && !user.bot;
-          };
-          const collector = message.createReactionCollector({
-            filter,
-            max: 1,
-          });
-
-          collector.on("collect", (reaction, user) => {
-            console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
-            sendToN1(events);
-          });
-          collector.on("end", (collected, reason) => {
-            // reactions are no longer collected
-            // if the 👍 emoji is clicked the MAX_REACTIONS time
-          });
+          }
+        } catch (err) {
+          console.log(err);
         }
       }
     );
   }
 });
 
-// const adicionar = () => {
-//   orion.query(
-//     {
-//       query: func.queryNode,
-//     },
-//     function (result) {
-//       let IDEvent = [];
-//       result.results.map((event) => {
-//         IDEvent.unshift(event.EventID);
-//       });
+const channel = "1021807249573806090";
+const channelN1 = "1037699806400876604";
 
-//       setInterval(() => {
-//         orion.query(
-//           {
-//             query: func.queryNode,
-//           },
-//           async function (result) {
-//             try {
-//               let IDEventNew = [];
-//               result.results.map((event) => {
-//                 IDEventNew.unshift(event.EventID);
-//               });
-//               for (let i = 0; i < result.results.length; i++) {
-//                 const msg = hyperlink(
-//                   result.results[i].IPAddress,
-//                   `http://172.16.40.9${result.results[i].WebUri}`
-//                 );
-//                 if (!IDEventNew.includes(IDEvent[i])) {
-//                   const events = new EmbedBuilder()
-//                     .setColor(
-//                       result.results[i].EventType == 1 ||
-//                         result.results[i].EventType == 10
-//                         ? 0xff0000
-//                         : 0x32cd32
-//                     )
-//                     .setTitle(result.results[i].NodeName.replace(/_/g, " "))
-//                     .setDescription(result.results[i].Message)
-//                     .addFields(
-//                       {
-//                         name: "IP",
-//                         value: msg,
-//                         inline: true,
-//                       },
-//                       result.results[i]?.Department
-//                         ? {
-//                             name: "TIPO",
-//                             value: result.results[i].Department,
-//                             inline: true,
-//                           }
-//                         : {
-//                             name: "\u200B",
-//                             value: "\u200B",
-//                             inline: true,
-//                           },
-//                       {
-//                         name: "\u200B",
-//                         value: "\u200B",
-//                         inline: true,
-//                       },
-//                       result.results[i].POP_ID || result.results[i].Location
-//                         ? {
-//                             name: "LOCAL",
-//                             value: `${
-//                               result.results[i].POP_ID
-//                                 ? result.results[i].POP_ID + "."
-//                                 : ""
-//                             }  ${
-//                               result.results[i].Location
-//                                 ? result.results[i].Location + "."
-//                                 : ""
-//                             }`,
-//                             inline: true,
-//                           }
-//                         : {
-//                             name: "\u200B",
-//                             value: "\u200B",
-//                             inline: true,
-//                           },
-//                       result.results[i].City
-//                         ? {
-//                             name: "CIDADE",
-//                             value: result.results[i].City,
-//                           }
-//                         : {
-//                             name: "\u200B",
-//                             value: "\u200B",
-//                             inline: true,
-//                           }
-//                     )
-//                     .setFooter({
-//                       text: `${("0" + result.results[i].DayTime).slice(-2)}/${(
-//                         "0" + result.results[i].MonthTime
-//                       ).slice(-2)}/${result.results[i].YearTime} ${(
-//                         "0" + result.results[i].HourTime
-//                       ).slice(-2)}:${("0" + result.results[i].MinuteTime).slice(
-//                         -2
-//                       )}`,
-//                     });
-//                   if (
-//                     (result.results[i].EventType == 10 &&
-//                       result.results[i].NodeID !=
-//                         result.results[i].NetObjectID) ||
-//                     (result.results[i].EventType == 11 &&
-//                       result.results[i].NodeID != result.results[i].NetObjectID)
-//                   ) {
-//                     orion.query(
-//                       {
-//                         query: func.queryInterface,
-//                         parameters: {
-//                           id: result.results[i].EventID,
-//                         },
-//                       },
-//                       async function (result) {
-//                         const pon = result.results[0].IfName.split("-");
-//                         console.log(pon);
-//                         if (pon[3] > 0) {
-//                           let eachOLT = result.results[0].NodeName;
-//                           if (
-//                             globalOltIntelbras[eachOLT] &&
-//                             result.results[0].EventType == 11
-//                           ) {
-//                             globalOltIntelbras[eachOLT].push(
-//                               result.results[0].Message
-//                             );
-//                           } else if (
-//                             globalOltIntelbrasDown[eachOLT] &&
-//                             result.results[0].EventType != 11
-//                           ) {
-//                             globalOltIntelbrasDown[eachOLT].push(
-//                               result.results[0].Message
-//                             );
-//                           } else {
-//                             result.results[i].EventType == 11
-//                               ? (globalOltIntelbras[eachOLT] = [
-//                                   result.results[0].Message,
-//                                 ])
-//                               : (globalOltIntelbrasDown[eachOLT] = [
-//                                   result.results[0].Message,
-//                                 ]);
-//                           }
+const adicionar = () => {
+  orion.query(
+    {
+      query: func.queryNode,
+    },
+    function (result) {
+      let IDEvent = [];
+      result.results.map((event) => {
+        IDEvent.unshift(event.EventID);
+      });
+      try {
+        setInterval(() => {
+          orion.query(
+            {
+              query: func.queryNode,
+            },
+            async function (result) {
+              try {
+                let IDEventNew = [];
+                result.results.map((event) => {
+                  IDEventNew.unshift(event.EventID);
+                });
+                for (let i = 0; i < result.results.length; i++) {
+                  const msg = hyperlink(
+                    result.results[i].IPAddress,
+                    `http://172.16.40.9${result.results[i].WebUri}`
+                  );
+                  if (!IDEventNew.includes(IDEvent[i])) {
+                    const events = new EmbedBuilder()
+                      .setColor(
+                        result.results[i].EventType == 1 ||
+                          result.results[i].EventType == 10
+                          ? 0xff0000
+                          : 0x32cd32
+                      )
+                      .setTitle(result.results[i].NodeName.replace(/_/g, " "))
+                      .setDescription(result.results[i].Message)
+                      .addFields(
+                        {
+                          name: "IP",
+                          value: msg,
+                          inline: true,
+                        },
+                        result.results[i]?.Department
+                          ? {
+                              name: "TIPO",
+                              value: result.results[i].Department,
+                              inline: true,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            },
+                        {
+                          name: "\u200B",
+                          value: "\u200B",
+                          inline: true,
+                        },
+                        result.results[i].POP_ID || result.results[i].Location
+                          ? {
+                              name: "LOCAL",
+                              value: `${
+                                result.results[i].POP_ID
+                                  ? result.results[i].POP_ID + "."
+                                  : ""
+                              }  ${
+                                result.results[i].Location
+                                  ? result.results[i].Location + "."
+                                  : ""
+                              }`,
+                              inline: true,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            },
+                        result.results[i].City
+                          ? {
+                              name: "CIDADE",
+                              value: result.results[i].City,
+                            }
+                          : {
+                              name: "\u200B",
+                              value: "\u200B",
+                              inline: true,
+                            }
+                      )
+                      .setFooter({
+                        text: `${("0" + result.results[i].DayTime).slice(
+                          -2
+                        )}/${("0" + result.results[i].MonthTime).slice(-2)}/${
+                          result.results[i].YearTime
+                        } ${("0" + result.results[i].HourTime).slice(-2)}:${(
+                          "0" + result.results[i].MinuteTime
+                        ).slice(-2)}`,
+                      });
+                    if (
+                      (result.results[i].EventType == 10 &&
+                        result.results[i].NodeID !=
+                          result.results[i].NetObjectID) ||
+                      (result.results[i].EventType == 11 &&
+                        result.results[i].NodeID !=
+                          result.results[i].NetObjectID)
+                    ) {
+                      orion.query(
+                        {
+                          query: func.queryInterface,
+                          parameters: {
+                            id: result.results[i].EventID,
+                          },
+                        },
+                        async function (result) {
+                          const pon = result.results[0].IfName.split("-");
+                          console.log(pon);
+                          const time = `${(
+                            "0" + result.results[0].DayTime
+                          ).slice(-2)}/${(
+                            "0" + result.results[0].MonthTime
+                          ).slice(-2)}/${result.results[0].YearTime} ${(
+                            "0" + result.results[0].HourTime
+                          ).slice(-2)}:${(
+                            "0" + result.results[0].MinuteTime
+                          ).slice(-2)}`;
+                          if (pon[3] > 0) {
+                            let eachOLT = result.results[0].NodeName;
+                            if (
+                              globalOltIntelbras[eachOLT] &&
+                              result.results[0].EventType == 11
+                            ) {
+                              globalOltIntelbras[eachOLT]["Message"].push(
+                                result.results[0].Message
+                              );
+                            } else if (
+                              globalOltIntelbrasDown[eachOLT] &&
+                              result.results[0].EventType != 11
+                            ) {
+                              globalOltIntelbrasDown[eachOLT]["Message"].push(
+                                result.results[0].Message
+                              );
+                            } else {
+                              result.results[0].EventType == 11
+                                ? (globalOltIntelbras[eachOLT] = {
+                                    Message: [result.results[0].Message],
+                                    Time: time,
+                                  })
+                                : (globalOltIntelbrasDown[eachOLT] = {
+                                    Message: [result.results[0].Message],
+                                    Time: time,
+                                  });
+                            }
+                            set_time_out();
+                          } else {
+                            const address = hyperlink(
+                              result.results[0].IPAddress,
+                              `http://172.16.40.9${result.results[0].IWebUri}`
+                            );
+                            const events = new EmbedBuilder()
+                              .setColor(
+                                result.results[0].EventType == 10
+                                  ? 0xff0000
+                                  : 0x32cd32
+                              )
+                              .setTitle(
+                                result.results[0].NodeName.replace(/_/g, " ")
+                              )
+                              .setDescription(result.results[0].Message)
+                              .addFields(
+                                {
+                                  name: "IP",
+                                  value: address,
+                                  inline: true,
+                                },
+                                result.results[0]?.Department
+                                  ? {
+                                      name: "TIPO",
+                                      value: result.results[0].Department,
+                                      inline: true,
+                                    }
+                                  : {
+                                      name: "\u200B",
+                                      value: "\u200B",
+                                      inline: true,
+                                    },
+                                {
+                                  name: "\u200B",
+                                  value: "\u200B",
+                                  inline: true,
+                                },
+                                result.results[0].POP_ID ||
+                                  result.results[0].Location
+                                  ? {
+                                      name: "LOCAL",
+                                      value: `${
+                                        result.results[0].POP_ID
+                                          ? result.results[0].POP_ID + "."
+                                          : ""
+                                      }  ${
+                                        result.results[0].Location
+                                          ? result.results[0].Location + "."
+                                          : ""
+                                      }`,
+                                      inline: true,
+                                    }
+                                  : {
+                                      name: "\u200B",
+                                      value: "\u200B",
+                                      inline: true,
+                                    },
+                                result.results[0].City
+                                  ? {
+                                      name: "CIDADE",
+                                      value: result.results[0].City,
+                                    }
+                                  : {
+                                      name: "\u200B",
+                                      value: "\u200B",
+                                      inline: true,
+                                    }
+                              )
+                              .setFooter({
+                                text: `${(
+                                  "0" + result.results[0].DayTime
+                                ).slice(-2)}/${(
+                                  "0" + result.results[0].MonthTime
+                                ).slice(-2)}/${result.results[0].YearTime} ${(
+                                  "0" + result.results[0].HourTime
+                                ).slice(-2)}:${(
+                                  "0" + result.results[0].MinuteTime
+                                ).slice(-2)}`,
+                              });
+                            sendToMonitoramento(events);
+                          }
+                          console.log(pon[3]);
+                        }
+                      );
+                    } else {
+                      sendToMonitoramento(events);
+                      console.log(result.results[i].Message);
+                    }
+                  } else {
+                    console.log("repetido");
+                  }
+                }
+                console.log(IDEvent);
+                IDEvent = IDEventNew;
 
-//                           const title = result.results[0].NodeName.replace(
-//                             /_/g,
-//                             " "
-//                           );
-//                           const state =
-//                             result.results[0].EventType == 11 ? true : false;
-//                           const time = `${(
-//                             "0" + result.results[0].DayTime
-//                           ).slice(-2)}/${(
-//                             "0" + result.results[0].MonthTime
-//                           ).slice(-2)}/${result.results[0].YearTime} ${(
-//                             "0" + result.results[0].HourTime
-//                           ).slice(-2)}:${(
-//                             "0" + result.results[0].MinuteTime
-//                           ).slice(-2)}`;
-
-//                           if (state) {
-//                             set_time_out(0x32cd32, title, time);
-//                           } else {
-//                             set_time_out(0xff0000, title, time);
-//                           }
-//                         } else {
-//                           const address = hyperlink(
-//                             result.results[0].IPAddress,
-//                             `http://172.16.40.9${result.results[0].IWebUri}`
-//                           );
-//                           const events = new EmbedBuilder()
-//                             .setColor(
-//                               result.results[0].EventType == 10
-//                                 ? 0xff0000
-//                                 : 0x32cd32
-//                             )
-//                             .setTitle(
-//                               result.results[0].NodeName.replace(/_/g, " ")
-//                             )
-//                             .setDescription(result.results[0].Message)
-//                             .addFields(
-//                               {
-//                                 name: "IP",
-//                                 value: address,
-//                                 inline: true,
-//                               },
-//                               result.results[0]?.Department
-//                                 ? {
-//                                     name: "TIPO",
-//                                     value: result.results[0].Department,
-//                                     inline: true,
-//                                   }
-//                                 : {
-//                                     name: "\u200B",
-//                                     value: "\u200B",
-//                                     inline: true,
-//                                   },
-//                               {
-//                                 name: "\u200B",
-//                                 value: "\u200B",
-//                                 inline: true,
-//                               },
-//                               result.results[0].POP_ID ||
-//                                 result.results[0].Location
-//                                 ? {
-//                                     name: "LOCAL",
-//                                     value: `${
-//                                       result.results[0].POP_ID
-//                                         ? result.results[0].POP_ID + "."
-//                                         : ""
-//                                     }  ${
-//                                       result.results[0].Location
-//                                         ? result.results[0].Location + "."
-//                                         : ""
-//                                     }`,
-//                                     inline: true,
-//                                   }
-//                                 : {
-//                                     name: "\u200B",
-//                                     value: "\u200B",
-//                                     inline: true,
-//                                   },
-//                               result.results[0].City
-//                                 ? {
-//                                     name: "CIDADE",
-//                                     value: result.results[0].City,
-//                                   }
-//                                 : {
-//                                     name: "\u200B",
-//                                     value: "\u200B",
-//                                     inline: true,
-//                                   }
-//                             )
-//                             .setFooter({
-//                               text: `${("0" + result.results[0].DayTime).slice(
-//                                 -2
-//                               )}/${("0" + result.results[0].MonthTime).slice(
-//                                 -2
-//                               )}/${result.results[0].YearTime} ${(
-//                                 "0" + result.results[0].HourTime
-//                               ).slice(-2)}:${(
-//                                 "0" + result.results[0].MinuteTime
-//                               ).slice(-2)}`,
-//                             });
-//                           client.channels.cache
-//                             .get(`1021807249573806090`)
-//                             .send({ embeds: [events] });
-//                         }
-//                         console.log(pon[3]);
-//                       }
-//                     );
-//                   } else {
-//                     await client.channels.cache
-//                       .get(`1021807249573806090`)
-//                       .send({ embeds: [events] });
-//                     console.log(result.results[i].Message);
-//                   }
-//                 } else {
-//                   console.log("repetido");
-//                 }
-//               }
-//               console.log(IDEvent);
-//               IDEvent = IDEventNew;
-
-//               console.log(IDEventNew);
-//             } catch (err) {
-//               console.log(err);
-//             }
-//           }
-//         );
-//       }, 50000);
-//     }
-//   );
-// };
-// adicionar();
+                console.log(IDEventNew);
+              } catch (err) {
+                console.log(err);
+              }
+            }
+          );
+        }, timeOfInterval);
+      } catch {
+        (e) => console.log(e);
+      }
+    }
+  );
+};
+adicionar();
