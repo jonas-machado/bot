@@ -54,9 +54,10 @@ var timeout_handles_else_down = [];
 const timeForWait = 180000;
 const timeOfInterval = 30000;
 
-const set_time_out = async (color, title, time, id) => {
+const set_time_out = async (teste, id) => {
   console.log(globalOltIntelbras);
   console.log(globalOltIntelbrasDown);
+  console.log(teste);
 
   //this is for up onus
   for (let olts in globalOltIntelbras) {
@@ -90,14 +91,16 @@ const set_time_out = async (color, title, time, id) => {
           console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
           sendToN1(embedIntefaces);
         });
-        globalOltIntelbras[olts].length = 0;
+        delete (await globalOltIntelbras[olts]);
+        console.log(globalOltIntelbras);
       }, timeForWait);
     } else {
-      if (olts in timeout_handles_else) {
-        clearTimeout(timeout_handles_else[olts]);
+      if (olts in timeout_handles) {
+        clearTimeout(timeout_handles_down[olts]);
       }
-      timeout_handles_else[olts] = setTimeout(() => {
-        globalOltIntelbras[olts].length = 0;
+      timeout_handles[olts] = setTimeout(async () => {
+        delete (await globalOltIntelbras[olts]);
+        console.log("deleted:" + globalOltIntelbras);
       }, timeForWait);
       console.log("menor");
     }
@@ -121,7 +124,6 @@ const set_time_out = async (color, title, time, id) => {
         let message = await client.channels.cache
           .get(channel)
           .send({ embeds: [embedIntefaces] });
-        globalOltIntelbrasDown[olts].length = 0;
         message.react("🚨");
         const filter = (reaction, user) => {
           return reaction.emoji.name === "🚨" && !user.bot;
@@ -135,13 +137,16 @@ const set_time_out = async (color, title, time, id) => {
           console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
           sendToN1(embedIntefaces);
         });
+        delete globalOltIntelbrasDown[olts];
+        console.log(globalOltIntelbrasDown);
       }, timeForWait);
     } else {
-      if (olts in timeout_handles_else_down) {
-        clearTimeout(timeout_handles_else_down[olts]);
+      if (olts in timeout_handles_down) {
+        clearTimeout(timeout_handles_down[olts]);
       }
-      timeout_handles_else_down[olts] = setTimeout(() => {
-        globalOltIntelbrasDown[olts].length = 0;
+      timeout_handles_down[olts] = setTimeout(() => {
+        delete globalOltIntelbrasDown[olts];
+        console.log("deleted:" + globalOltIntelbrasDown);
       }, timeForWait);
       console.log("menor");
     }
@@ -288,7 +293,7 @@ client.on("interactionCreate", async (interaction) => {
   if (commandName == "teste") {
     orion.query(
       {
-        query: `SELECT TOP 100 
+        query: `SELECT TOP 100
         EventID,
         DAY(EventTime) AS DayTime, 
         MONTH(EventTime) AS MonthTime, 
@@ -714,7 +719,8 @@ const adicionar = () => {
                                     Time: time,
                                   });
                             }
-                            set_time_out();
+                            let teste = "testando";
+                            set_time_out(teste);
                           } else {
                             const address = hyperlink(
                               result.results[0].IPAddress,
@@ -803,14 +809,9 @@ const adicionar = () => {
                       sendToMonitoramento(events);
                       console.log(result.results[i].Message);
                     }
-                  } else {
-                    console.log("repetido");
                   }
                 }
-                console.log(IDEvent);
                 IDEvent = IDEventNew;
-
-                console.log(IDEventNew);
               } catch (err) {
                 console.log(err);
               }
