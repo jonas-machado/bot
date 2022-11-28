@@ -45,144 +45,8 @@ const cobrança = {
   10: "994582003733254207",
 };
 
-let globalOltIntelbras = [];
-let globalOltIntelbrasDown = [];
-var timeout_handles = [];
-var timeout_handles_else = [];
-var timeout_handles_down = [];
-var timeout_handles_else_down = [];
-const timeForWait = 180000;
-const timeOfInterval = 30000;
-
-const set_time_out = async (teste, id) => {
-  console.log(globalOltIntelbras);
-  console.log(globalOltIntelbrasDown);
-  console.log(teste);
-
-  //this is for up onus
-  for (let olts in globalOltIntelbras) {
-    if (globalOltIntelbras[olts]["Message"].length > 3) {
-      const alarmes = globalOltIntelbras[olts]["Message"].join("\n");
-      /// wrapper
-      if (olts in timeout_handles) {
-        clearTimeout(timeout_handles[olts]);
-      }
-      timeout_handles[olts] = setTimeout(async () => {
-        const embedIntefaces = {
-          color: 0x32cd32,
-          title: olts.replace(/_/g, " "),
-          description: alarmes,
-          footer: { text: globalOltIntelbras[olts]["Time"] },
-        };
-        console.log(alarmes);
-        let message = await client.channels.cache
-          .get(channel)
-          .send({ embeds: [embedIntefaces] });
-        message.react("🚨");
-        const filter = (reaction, user) => {
-          return reaction.emoji.name === "🚨" && !user.bot;
-        };
-        const collector = message.createReactionCollector({
-          filter,
-          max: 1,
-        });
-
-        collector.on("collect", (reaction, user) => {
-          console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
-          sendToN1(embedIntefaces);
-        });
-        delete (await globalOltIntelbras[olts]);
-        console.log(globalOltIntelbras);
-      }, timeForWait);
-    } else {
-      if (olts in timeout_handles) {
-        clearTimeout(timeout_handles_down[olts]);
-      }
-      timeout_handles[olts] = setTimeout(async () => {
-        delete (await globalOltIntelbras[olts]);
-        console.log("deleted:" + globalOltIntelbras);
-      }, timeForWait);
-      console.log("menor");
-    }
-  }
-  //this is for down onus
-  for (let olts in globalOltIntelbrasDown) {
-    if (globalOltIntelbrasDown[olts]["Message"].length > 3) {
-      const alarmes = globalOltIntelbrasDown[olts]["Message"].join("\n");
-      /// wrapper
-      if (olts in timeout_handles_down) {
-        clearTimeout(timeout_handles_down[olts]);
-      }
-      timeout_handles_down[olts] = setTimeout(async () => {
-        const embedIntefaces = {
-          color: 0xff0000,
-          title: olts.replace(/_/g, " "),
-          description: alarmes,
-          footer: { text: globalOltIntelbrasDown[olts]["Time"] },
-        };
-        console.log(alarmes);
-        let message = await client.channels.cache
-          .get(channel)
-          .send({ embeds: [embedIntefaces] });
-        message.react("🚨");
-        const filter = (reaction, user) => {
-          return reaction.emoji.name === "🚨" && !user.bot;
-        };
-        const collector = message.createReactionCollector({
-          filter,
-          max: 1,
-        });
-
-        collector.on("collect", (reaction, user) => {
-          console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
-          sendToN1(embedIntefaces);
-        });
-        delete globalOltIntelbrasDown[olts];
-        console.log(globalOltIntelbrasDown);
-      }, timeForWait);
-    } else {
-      if (olts in timeout_handles_down) {
-        clearTimeout(timeout_handles_down[olts]);
-      }
-      timeout_handles_down[olts] = setTimeout(() => {
-        delete globalOltIntelbrasDown[olts];
-        console.log("deleted:" + globalOltIntelbrasDown);
-      }, timeForWait);
-      console.log("menor");
-    }
-  }
-};
-
-const sendToMonitoramento = async (events) => {
-  let message = await client.channels.cache
-    .get(channel)
-    .send({ embeds: [events] });
-  message.react("🚨");
-  const filter = (reaction, user) => {
-    return reaction.emoji.name === "🚨" && !user.bot;
-  };
-  const collector = message.createReactionCollector({
-    filter,
-    max: 1,
-  });
-  collector.on("collect", (reaction, user) => {
-    console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
-    sendToN1(events);
-  });
-  collector.on("end", (collected, reason) => {
-    // reactions are no longer collected
-    // if the 👍 emoji is clicked the MAX_REACTIONS time
-  });
-};
-
-const sendToN1 = (embedObject) => {
-  let message = client.channels.cache
-    .get(channelN1)
-    .send({ embeds: [embedObject] });
-};
-
 const func = {
-  queryNode: `SELECT TOP 100 
+  queryNode: `SELECT TOP 20 
   EventID,
   DAY(EventTime) AS DayTime, 
   MONTH(EventTime) AS MonthTime, 
@@ -264,6 +128,111 @@ Message LIKE i.FullName + '%'
 ORDER BY EventTime DESC;
   `,
 };
+
+let globalOltIntelbras = [];
+let globalOltIntelbrasDown = [];
+var timeout_handles = [];
+var timeout_handles_down = [];
+
+const timeForWait = 180000;
+const timeOfInterval = 30000;
+
+const set_time_out = (id) => {
+  console.log(globalOltIntelbras);
+  console.log(globalOltIntelbrasDown);
+
+  //this is for up onus
+  for (let olts in globalOltIntelbras) {
+    if (globalOltIntelbras[olts]["Message"].length > 3) {
+      const alarmes = globalOltIntelbras[olts]["Message"].join("\n");
+      /// wrapper
+      if (olts in timeout_handles) {
+        clearTimeout(timeout_handles[olts]);
+      }
+      timeout_handles[olts] = setTimeout(async () => {
+        const embedIntefaces = {
+          color: 0x32cd32,
+          title: olts.replace(/_/g, " "),
+          description: alarmes,
+          footer: { text: globalOltIntelbras[olts]["Time"] },
+        };
+        console.log(alarmes);
+        await sendToMonitoramento(embedIntefaces);
+        delete globalOltIntelbras[olts];
+        console.log("deleted up: " + olts);
+      }, 20000);
+    } else {
+      if (olts in timeout_handles) {
+        clearTimeout(timeout_handles[olts]);
+      }
+      timeout_handles[olts] = setTimeout(async () => {
+        delete globalOltIntelbras[olts];
+        console.log("deleted up: " + olts);
+      }, 20000);
+      console.log("menor up: " + olts);
+    }
+  }
+  //this is for down onus
+  for (let olts in globalOltIntelbrasDown) {
+    if (globalOltIntelbrasDown[olts]["Message"].length > 3) {
+      const alarmes = globalOltIntelbrasDown[olts]["Message"].join("\n");
+      /// wrapper
+      if (olts in timeout_handles_down) {
+        clearTimeout(timeout_handles_down[olts]);
+      }
+      timeout_handles_down[olts] = setTimeout(async () => {
+        const embedIntefaces = {
+          color: 0xff0000,
+          title: olts.replace(/_/g, " "),
+          description: alarmes,
+          footer: { text: globalOltIntelbrasDown[olts]["Time"] },
+        };
+        console.log(alarmes);
+        await sendToMonitoramento(embedIntefaces);
+        delete globalOltIntelbrasDown[olts];
+        console.log("deleted down: " + olts);
+      }, 20000);
+    } else {
+      if (olts in timeout_handles_down) {
+        clearTimeout(timeout_handles_down[olts]);
+      }
+      timeout_handles_down[olts] = setTimeout(() => {
+        delete globalOltIntelbrasDown[olts];
+        console.log("deleted down: " + olts);
+      }, 20000);
+      console.log("menor down: " + olts);
+    }
+  }
+};
+
+const sendToMonitoramento = async (events) => {
+  let message = await client.channels.cache
+    .get(channel)
+    .send({ embeds: [events] });
+  message.react("🚨");
+  const filter = (reaction, user) => {
+    return reaction.emoji.name === "🚨" && !user.bot;
+  };
+  const collector = message.createReactionCollector({
+    filter,
+    max: 1,
+  });
+  collector.on("collect", (reaction, user) => {
+    console.log(`Collected ${reaction.emoji.name} from ${user.tag}`);
+    sendToN1(events);
+  });
+  collector.on("end", (collected, reason) => {
+    // reactions are no longer collected
+    // if the 👍 emoji is clicked the MAX_REACTIONS time
+  });
+};
+
+const sendToN1 = (embedObject) => {
+  let message = client.channels.cache
+    .get(channelN1)
+    .send({ embeds: [embedObject] });
+};
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
   const { commandName } = interaction;
@@ -293,7 +262,7 @@ client.on("interactionCreate", async (interaction) => {
   if (commandName == "teste") {
     orion.query(
       {
-        query: `SELECT TOP 100
+        query: `SELECT TOP 1
         EventID,
         DAY(EventTime) AS DayTime, 
         MONTH(EventTime) AS MonthTime, 
@@ -427,130 +396,7 @@ client.on("interactionCreate", async (interaction) => {
               (result.results[i].EventType == 11 &&
                 result.results[i].NodeID != result.results[i].NetObjectID)
             ) {
-              orion.query(
-                {
-                  query: func.queryInterface,
-                  parameters: {
-                    id: result.results[i].EventID,
-                  },
-                },
-                async function (result) {
-                  const pon = result.results[0].IfName.split("-");
-                  console.log(pon);
-                  const state =
-                    result.results[0].EventType == 11 ? true : false;
-                  const time = `${("0" + result.results[0].DayTime).slice(
-                    -2
-                  )}/${("0" + result.results[0].MonthTime).slice(-2)}/${
-                    result.results[0].YearTime
-                  } ${("0" + result.results[0].HourTime).slice(-2)}:${(
-                    "0" + result.results[0].MinuteTime
-                  ).slice(-2)}`;
-                  if (pon[3] > 0) {
-                    let eachOLT = result.results[0].NodeName;
-                    if (
-                      globalOltIntelbras[eachOLT] &&
-                      result.results[0].EventType == 11
-                    ) {
-                      globalOltIntelbras[eachOLT]["Message"].push(
-                        result.results[0].Message
-                      );
-                    } else if (
-                      globalOltIntelbrasDown[eachOLT] &&
-                      result.results[0].EventType != 11
-                    ) {
-                      globalOltIntelbrasDown[eachOLT]["Message"].push(
-                        result.results[0].Message
-                      );
-                    } else {
-                      result.results[0].EventType == 11
-                        ? (globalOltIntelbras[eachOLT] = {
-                            Message: [result.results[0].Message],
-                            Time: time,
-                          })
-                        : (globalOltIntelbrasDown[eachOLT] = {
-                            Message: [result.results[0].Message],
-                            Time: time,
-                          });
-                    }
-                    set_time_out();
-                  } else {
-                    const address = hyperlink(
-                      result.results[0].IPAddress,
-                      `http://172.16.40.9${result.results[0].IWebUri}`
-                    );
-                    const events = new EmbedBuilder()
-                      .setColor(
-                        result.results[0].EventType == 10 ? 0xff0000 : 0x32cd32
-                      )
-                      .setTitle(result.results[0].NodeName.replace(/_/g, " "))
-                      .setDescription(result.results[0].Message)
-                      .addFields(
-                        {
-                          name: "IP",
-                          value: address,
-                          inline: true,
-                        },
-                        result.results[0]?.Department
-                          ? {
-                              name: "TIPO",
-                              value: result.results[0].Department,
-                              inline: true,
-                            }
-                          : {
-                              name: "\u200B",
-                              value: "\u200B",
-                              inline: true,
-                            },
-                        {
-                          name: "\u200B",
-                          value: "\u200B",
-                          inline: true,
-                        },
-                        result.results[0].POP_ID || result.results[0].Location
-                          ? {
-                              name: "LOCAL",
-                              value: `${
-                                result.results[0].POP_ID
-                                  ? result.results[0].POP_ID + "."
-                                  : ""
-                              }  ${
-                                result.results[0].Location
-                                  ? result.results[0].Location + "."
-                                  : ""
-                              }`,
-                              inline: true,
-                            }
-                          : {
-                              name: "\u200B",
-                              value: "\u200B",
-                              inline: true,
-                            },
-                        result.results[0].City
-                          ? {
-                              name: "CIDADE",
-                              value: result.results[0].City,
-                            }
-                          : {
-                              name: "\u200B",
-                              value: "\u200B",
-                              inline: true,
-                            }
-                      )
-                      .setFooter({
-                        text: `${("0" + result.results[0].DayTime).slice(
-                          -2
-                        )}/${("0" + result.results[0].MonthTime).slice(-2)}/${
-                          result.results[0].YearTime
-                        } ${("0" + result.results[0].HourTime).slice(-2)}:${(
-                          "0" + result.results[0].MinuteTime
-                        ).slice(-2)}`,
-                      });
-                    sendToMonitoramento(events);
-                  }
-                  console.log(pon[3]);
-                }
-              );
+              oltIntelbrasHandle(result.results[i].EventID);
             } else {
               sendToMonitoramento(events);
               console.log(result.results[i].Message);
@@ -566,6 +412,121 @@ client.on("interactionCreate", async (interaction) => {
 
 const channel = "1021807249573806090";
 const channelN1 = "1037699806400876604";
+
+const oltIntelbrasHandle = (eventID) => {
+  orion.query(
+    {
+      query: func.queryInterface,
+      parameters: {
+        id: eventID,
+      },
+    },
+    async function (result) {
+      const pon = result.results[0].IfName.split("-");
+      console.log(result.results[i].Message);
+      const time = `${("0" + result.results[0].DayTime).slice(-2)}/${(
+        "0" + result.results[0].MonthTime
+      ).slice(-2)}/${result.results[0].YearTime} ${(
+        "0" + result.results[0].HourTime
+      ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`;
+      if (pon[3] > 0) {
+        let eachOLT = result.results[0].NodeName;
+        if (globalOltIntelbras[eachOLT] && result.results[0].EventType == 11) {
+          globalOltIntelbras[eachOLT]["Message"].push(
+            result.results[0].Message
+          );
+        } else if (
+          globalOltIntelbrasDown[eachOLT] &&
+          result.results[0].EventType != 11
+        ) {
+          globalOltIntelbrasDown[eachOLT]["Message"].push(
+            result.results[0].Message
+          );
+        } else {
+          result.results[0].EventType == 11
+            ? (globalOltIntelbras[eachOLT] = {
+                Message: [result.results[0].Message],
+                Time: time,
+              })
+            : (globalOltIntelbrasDown[eachOLT] = {
+                Message: [result.results[0].Message],
+                Time: time,
+              });
+        }
+        set_time_out();
+      } else {
+        const address = hyperlink(
+          result.results[0].IPAddress,
+          `http://172.16.40.9${result.results[0].IWebUri}`
+        );
+        const events = new EmbedBuilder()
+          .setColor(result.results[0].EventType == 10 ? 0xff0000 : 0x32cd32)
+          .setTitle(result.results[0].NodeName.replace(/_/g, " "))
+          .setDescription(result.results[0].Message)
+          .addFields(
+            {
+              name: "IP",
+              value: address,
+              inline: true,
+            },
+            result.results[0]?.Department
+              ? {
+                  name: "TIPO",
+                  value: result.results[0].Department,
+                  inline: true,
+                }
+              : {
+                  name: "\u200B",
+                  value: "\u200B",
+                  inline: true,
+                },
+            {
+              name: "\u200B",
+              value: "\u200B",
+              inline: true,
+            },
+            result.results[0].POP_ID || result.results[0].Location
+              ? {
+                  name: "LOCAL",
+                  value: `${
+                    result.results[0].POP_ID
+                      ? result.results[0].POP_ID + "."
+                      : ""
+                  }  ${
+                    result.results[0].Location
+                      ? result.results[0].Location + "."
+                      : ""
+                  }`,
+                  inline: true,
+                }
+              : {
+                  name: "\u200B",
+                  value: "\u200B",
+                  inline: true,
+                },
+            result.results[0].City
+              ? {
+                  name: "CIDADE",
+                  value: result.results[0].City,
+                }
+              : {
+                  name: "\u200B",
+                  value: "\u200B",
+                  inline: true,
+                }
+          )
+          .setFooter({
+            text: `${("0" + result.results[0].DayTime).slice(-2)}/${(
+              "0" + result.results[0].MonthTime
+            ).slice(-2)}/${result.results[0].YearTime} ${(
+              "0" + result.results[0].HourTime
+            ).slice(-2)}:${("0" + result.results[0].MinuteTime).slice(-2)}`,
+          });
+        sendToMonitoramento(events);
+      }
+    }
+  );
+};
 
 const adicionar = () => {
   orion.query(
@@ -586,7 +547,7 @@ const adicionar = () => {
             async function (result) {
               try {
                 let IDEventNew = [];
-                result.results.map((event) => {
+                await result.results.map((event) => {
                   IDEventNew.unshift(event.EventID);
                 });
                 for (let i = 0; i < result.results.length; i++) {
@@ -682,7 +643,7 @@ const adicionar = () => {
                         },
                         async function (result) {
                           const pon = result.results[0].IfName.split("-");
-                          console.log(pon);
+                          console.log(result.results[i].Message);
                           const time = `${(
                             "0" + result.results[0].DayTime
                           ).slice(-2)}/${(
@@ -693,7 +654,7 @@ const adicionar = () => {
                             "0" + result.results[0].MinuteTime
                           ).slice(-2)}`;
                           if (pon[3] > 0) {
-                            let eachOLT = result.results[0].NodeName;
+                            const eachOLT = result.results[0].NodeName;
                             if (
                               globalOltIntelbras[eachOLT] &&
                               result.results[0].EventType == 11
@@ -719,8 +680,7 @@ const adicionar = () => {
                                     Time: time,
                                   });
                             }
-                            let teste = "testando";
-                            set_time_out(teste);
+                            set_time_out();
                           } else {
                             const address = hyperlink(
                               result.results[0].IPAddress,
@@ -801,8 +761,8 @@ const adicionar = () => {
                                 ).slice(-2)}`,
                               });
                             sendToMonitoramento(events);
+                            console.log(result.results[i].Message);
                           }
-                          console.log(pon[3]);
                         }
                       );
                     } else {
