@@ -396,7 +396,7 @@ client.on("interactionCreate", async (interaction) => {
               (result.results[i].EventType == 11 &&
                 result.results[i].NodeID != result.results[i].NetObjectID)
             ) {
-              oltIntelbrasHandle(result.results[i].EventID);
+              interfaceHandle(result.results[i].EventID);
             } else {
               sendToMonitoramento(events);
               console.log(result.results[i].Message);
@@ -413,7 +413,7 @@ client.on("interactionCreate", async (interaction) => {
 const channel = "1021807249573806090";
 const channelN1 = "1037699806400876604";
 
-const oltIntelbrasHandle = (eventID) => {
+const interfaceHandle = (eventID) => {
   orion.query(
     {
       query: func.queryInterface,
@@ -423,7 +423,7 @@ const oltIntelbrasHandle = (eventID) => {
     },
     async function (result) {
       const pon = result.results[0].IfName.split("-");
-      console.log(result.results[i].Message);
+      console.log(result.results[0].Message);
       const time = `${("0" + result.results[0].DayTime).slice(-2)}/${(
         "0" + result.results[0].MonthTime
       ).slice(-2)}/${result.results[0].YearTime} ${(
@@ -634,137 +634,7 @@ const adicionar = () => {
                         result.results[i].NodeID !=
                           result.results[i].NetObjectID)
                     ) {
-                      orion.query(
-                        {
-                          query: func.queryInterface,
-                          parameters: {
-                            id: result.results[i].EventID,
-                          },
-                        },
-                        async function (result) {
-                          const pon = result.results[0].IfName.split("-");
-                          console.log(result.results[i].Message);
-                          const time = `${(
-                            "0" + result.results[0].DayTime
-                          ).slice(-2)}/${(
-                            "0" + result.results[0].MonthTime
-                          ).slice(-2)}/${result.results[0].YearTime} ${(
-                            "0" + result.results[0].HourTime
-                          ).slice(-2)}:${(
-                            "0" + result.results[0].MinuteTime
-                          ).slice(-2)}`;
-                          if (pon[3] > 0) {
-                            const eachOLT = result.results[0].NodeName;
-                            if (
-                              globalOltIntelbras[eachOLT] &&
-                              result.results[0].EventType == 11
-                            ) {
-                              globalOltIntelbras[eachOLT]["Message"].push(
-                                result.results[0].Message
-                              );
-                            } else if (
-                              globalOltIntelbrasDown[eachOLT] &&
-                              result.results[0].EventType != 11
-                            ) {
-                              globalOltIntelbrasDown[eachOLT]["Message"].push(
-                                result.results[0].Message
-                              );
-                            } else {
-                              result.results[0].EventType == 11
-                                ? (globalOltIntelbras[eachOLT] = {
-                                    Message: [result.results[0].Message],
-                                    Time: time,
-                                  })
-                                : (globalOltIntelbrasDown[eachOLT] = {
-                                    Message: [result.results[0].Message],
-                                    Time: time,
-                                  });
-                            }
-                            set_time_out();
-                          } else {
-                            const address = hyperlink(
-                              result.results[0].IPAddress,
-                              `http://172.16.40.9${result.results[0].IWebUri}`
-                            );
-                            const events = new EmbedBuilder()
-                              .setColor(
-                                result.results[0].EventType == 10
-                                  ? 0xff0000
-                                  : 0x32cd32
-                              )
-                              .setTitle(
-                                result.results[0].NodeName.replace(/_/g, " ")
-                              )
-                              .setDescription(result.results[0].Message)
-                              .addFields(
-                                {
-                                  name: "IP",
-                                  value: address,
-                                  inline: true,
-                                },
-                                result.results[0]?.Department
-                                  ? {
-                                      name: "TIPO",
-                                      value: result.results[0].Department,
-                                      inline: true,
-                                    }
-                                  : {
-                                      name: "\u200B",
-                                      value: "\u200B",
-                                      inline: true,
-                                    },
-                                {
-                                  name: "\u200B",
-                                  value: "\u200B",
-                                  inline: true,
-                                },
-                                result.results[0].POP_ID ||
-                                  result.results[0].Location
-                                  ? {
-                                      name: "LOCAL",
-                                      value: `${
-                                        result.results[0].POP_ID
-                                          ? result.results[0].POP_ID + "."
-                                          : ""
-                                      }  ${
-                                        result.results[0].Location
-                                          ? result.results[0].Location + "."
-                                          : ""
-                                      }`,
-                                      inline: true,
-                                    }
-                                  : {
-                                      name: "\u200B",
-                                      value: "\u200B",
-                                      inline: true,
-                                    },
-                                result.results[0].City
-                                  ? {
-                                      name: "CIDADE",
-                                      value: result.results[0].City,
-                                    }
-                                  : {
-                                      name: "\u200B",
-                                      value: "\u200B",
-                                      inline: true,
-                                    }
-                              )
-                              .setFooter({
-                                text: `${(
-                                  "0" + result.results[0].DayTime
-                                ).slice(-2)}/${(
-                                  "0" + result.results[0].MonthTime
-                                ).slice(-2)}/${result.results[0].YearTime} ${(
-                                  "0" + result.results[0].HourTime
-                                ).slice(-2)}:${(
-                                  "0" + result.results[0].MinuteTime
-                                ).slice(-2)}`,
-                              });
-                            sendToMonitoramento(events);
-                            console.log(result.results[i].Message);
-                          }
-                        }
-                      );
+                      interfaceHandle(result.results[i].EventID);
                     } else {
                       sendToMonitoramento(events);
                       console.log(result.results[i].Message);
